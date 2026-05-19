@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCollection } from '@/lib/store/collection';
 import { supabase } from '@/lib/supabase/client';
@@ -13,16 +13,27 @@ export default function ProfilePage() {
   const collection = useCollection(s => s.collection);
   const reset = useCollection(s => s.reset);
   const [user, setUser] = useState<UserMeta | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  }, []);
 
   useEffect(() => {
-    supabase().auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      const name  = user.user_metadata?.display_name || user.email || 'Guest';
-      const handle = user.user_metadata?.handle || user.email?.split('@')[0] || 'user';
+    supabase().auth.getUser().then(async ({ data: { user: authUser } }) => {
+      if (!authUser) return;
+      const { data: profile } = await supabase()
+        .from('profiles')
+        .select('display_name, handle')
+        .eq('id', authUser.id)
+        .single();
+      const name = profile?.display_name || authUser.user_metadata?.display_name || authUser.email || 'Guest';
+      const handle = profile?.handle || authUser.user_metadata?.handle || authUser.email?.split('@')[0] || 'user';
       setUser({
         display_name: name,
         handle,
-        email: user.email || '',
+        email: authUser.email || '',
         initial: name.charAt(0).toUpperCase(),
       });
     });
@@ -45,8 +56,36 @@ export default function ProfilePage() {
 
   const pct = Math.round(ownedCount / TOTAL_STICKERS * 100);
 
-  const handleReset = () => {
-    if (window.confirm('Reset all progress? This cannot be undone.')) reset();
+  const handleShare = async () => {
+    const handle = user?.handle ?? 'user';
+    const url = window.location.origin + '/@' + handle;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'SwapBook 2026', url }); } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      showToast('Link copied!');
+    }
+  };
+
+  const handleExport = () => {
+    const allStickers = ALBUM_GROUPS.flatMap(g => g.cards);
+    const rows = allStickers
+      .filter(s => (collection[s.code]?.qty ?? 0) > 0)
+      .map(s => `"${s.code}","${(s.name || '').replace(/"/g, '""')}","${s.team}","${s.type || ''}",${collection[s.code]?.qty ?? 0}`);
+    const csv = ['code,name,team,type,count', ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my-collection.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleReset = async () => {
+    if (!window.confirm('This will delete all your stickers. Are you sure?')) return;
+    await reset();
+    window.location.reload();
   };
 
   const handleSignOut = async () => {
@@ -60,6 +99,16 @@ export default function ProfilePage() {
 
   return (
     <div>
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 110, left: '50%', transform: 'translateX(-50%)',
+          background: '#23262F', color: '#EBEDF0', borderRadius: 12,
+          padding: '10px 18px', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)', zIndex: 100,
+          whiteSpace: 'nowrap',
+        }}>{toast}</div>
+      )}
+
       <div style={{ padding: '6px 18px 14px' }}>
         <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 11, fontWeight: 500, color: '#878B96', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
           @{handle}
@@ -108,10 +157,10 @@ export default function ProfilePage() {
             onClick={() => router.push('/register')}
           />
         )}
-        <SettingsRow icon={<Icons.share s={18} />} label="Share my profile" hint={`swap.bk/${handle}`} />
-        <SettingsRow icon={<Icons.copy s={18} />} label="Export collection" hint="CSV" />
-        <SettingsRow icon={<Icons.people s={18} />} label="Manage groups" hint="Groups" />
-        <SettingsRow icon={<Icons.scan s={18} />} label="Scan a pack" hint="Beta" />
+        <SettingsRow icon={<Icons.share s={18} />} label="Share my profile" hint={`swap.bk/${handle}`} onClick={handleShare} />
+        <SettingsRow icon={<Icons.copy s={18} />} label="Export collection" hint="CSV" onClick={handleExport} />
+        <SettingsRow icon={<Icons.people s={18} />} label="Manage groups" hint="Groups" onClick={() => router.push('/community')} />
+        <SettingsRow icon={<Icons.scan s={18} />} label="Scan a pack" hint="Beta" onClick={() => showToast('Coming soon 👀')} />
         <SettingsRow icon={<Icons.trash s={18} />} label="Reset album" danger onClick={handleReset} />
         {user && (
           <SettingsRow icon={<Icons.close s={18} />} label="Sign out" danger onClick={handleSignOut} />

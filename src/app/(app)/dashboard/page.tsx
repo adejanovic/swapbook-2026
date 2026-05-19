@@ -1,6 +1,7 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client';
 import { useCollection } from '@/lib/store/collection';
 import { ALBUM_GROUPS, TOTAL_STICKERS } from '@/lib/data/stickers';
 import { teamColor } from '@/lib/data/teams';
@@ -13,6 +14,21 @@ import { Icons } from '@/components/Icons';
 import type { Sticker } from '@/types';
 
 export default function DashboardPage() {
+  const [userInitial, setUserInitial] = useState('?');
+
+  useEffect(() => {
+    supabase().auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: profile } = await supabase()
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .single();
+      const name = profile?.display_name || user.user_metadata?.display_name || user.email || '';
+      setUserInitial(name.charAt(0).toUpperCase() || '?');
+    });
+  }, []);
+
   // Select raw collection — stable reference, only changes when stickers are added/removed
   const collection = useCollection(s => s.collection);
 
@@ -78,7 +94,7 @@ export default function DashboardPage() {
             background: 'linear-gradient(135deg, #C8F265, #6FB341)',
             color: '#0A1500', fontFamily: 'var(--font-bricolage, sans-serif)', fontWeight: 700, fontSize: 16,
             display: 'grid', placeItems: 'center',
-          }}>M</div>
+          }}>{userInitial}</div>
         </Link>
       </div>
 
@@ -151,7 +167,7 @@ export default function DashboardPage() {
         {recentCards.length === 0 ? (
           <EmptyState text="Tap stickers in the album to start collecting." />
         ) : (
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -14px', padding: '4px 14px' }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', margin: '0 -14px', padding: '4px 14px', WebkitOverflowScrolling: 'touch' as never, touchAction: 'pan-x' }}>
             {recentCards.map(({ card, qty }) => (
               <div key={card.code} style={{ width: 96, flexShrink: 0 }}>
                 <StickerTile sticker={card} overrideQty={qty} onLongPress={setSheetCard} />

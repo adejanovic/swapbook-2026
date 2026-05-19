@@ -1,4 +1,5 @@
 'use client';
+import { useRef, useState, useEffect } from 'react';
 import { useCollection } from '@/lib/store/collection';
 import { teamColor, teamLogo } from '@/lib/data/teams';
 import { Icons } from './Icons';
@@ -28,12 +29,52 @@ export function StickerSheet({ card, open, onClose }: Props) {
   const setQty = useCollection(s => s.setQty);
   const cycle = useCollection(s => s.cycle);
 
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const startY = useRef(0);
+
+  useEffect(() => {
+    if (open) {
+      setDragY(0);
+      setIsDragging(false);
+      setHasInteracted(false);
+    }
+  }, [open]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startY.current = e.touches[0].clientY;
+    setIsDragging(true);
+    setHasInteracted(true);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    const dy = e.touches[0].clientY - startY.current;
+    if (dy > 0) setDragY(dy);
+  };
+
+  const onTouchEnd = () => {
+    setIsDragging(false);
+    if (dragY > 100) {
+      setDragY(700);
+      setTimeout(onClose, 260);
+    } else {
+      setDragY(0);
+    }
+  };
+
   if (!open || !card) return null;
 
   const status = qty === 0 ? 'missing' : qty === 1 ? 'owned' : 'dup';
   const ring = teamColor(card.team);
   const logo = teamLogo(card.team);
   const num = card.code.replace(/^[A-Z]+0*/, '') || '00';
+
+  const panStyle: React.CSSProperties = !hasInteracted
+    ? { animation: 'sb-slideup .25s cubic-bezier(.2,.7,.2,1)' }
+    : isDragging
+      ? { transform: `translateY(${dragY}px)`, animation: 'none' }
+      : { transform: `translateY(${dragY}px)`, transition: 'transform 0.25s cubic-bezier(.2,.7,.2,1)', animation: 'none' };
 
   return (
     <div
@@ -46,12 +87,15 @@ export function StickerSheet({ card, open, onClose }: Props) {
     >
       <div
         onClick={e => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
         style={{
           width: '100%', background: '#0F1116',
           borderTopLeftRadius: 28, borderTopRightRadius: 28,
           boxShadow: '0 -20px 40px rgba(0,0,0,0.4)',
           padding: '10px 18px 34px',
-          animation: 'sb-slideup .25s cubic-bezier(.2,.7,.2,1)',
+          ...panStyle,
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 12px' }}>
