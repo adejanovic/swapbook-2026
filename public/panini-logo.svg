@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="256" fill="#1a1a2e"/>
+  <circle cx="256" cy="256" r="240" fill="none" stroke="#1D9E75" stroke-width="8"/>
+  <circle cx="256" cy="220" r="90" fill="white" stroke="#1a1a2e" stroke-width="3"/>
+  <polygon points="256,175 277,191 269,215 243,215 235,191" fill="#1a1a2e"/>
+  <polygon points="299,185 320,170 338,190 328,213 305,210" fill="#1a1a2e"/>
+  <polygon points="213,185 192,170 174,190 184,213 207,210" fill="#1a1a2e"/>
+  <polygon points="290,240 310,255 302,278 278,278 269,255" fill="#1a1a2e"/>
+  <polygon points="222,240 202,255 210,278 234,2
+cd "/Users/acodejanovic/Downloads/Panini Album/swapbook"
+git add public/panini-logo.svg
+git commit -m "Add Panini WC 2026 logo"
+git push
