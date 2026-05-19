@@ -31,6 +31,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${inter.variable} ${mono.variable}`}>
+      <head>
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+      </head>
       <body style={{ background: '#0A0B0E', color: '#EBEDF0', minHeight: '100dvh' }}>
         {children}
       </body>
