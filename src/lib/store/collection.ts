@@ -14,7 +14,7 @@ interface CollectionState {
   collection: Record<string, { qty: number; ts: number }>;
   isLoaded: boolean;
 
-  load: (userId?: string) => Promise<void>;
+  load: (userId: string) => Promise<void>;
   qty: (code: string) => number;
   setQty: (code: string, qty: number) => Promise<void>;
   cycle: (code: string) => Promise<void>;
@@ -27,56 +27,38 @@ interface CollectionState {
   teamProgress: (team: string) => { owned: number; total: number; pct: number };
 }
 
-const STORAGE_KEY = 'swapbook2026_v1';
-
-function loadLocal(): Record<string, { qty: number; ts: number }> {
-  if (typeof window === 'undefined') return {};
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
-  catch { return {}; }
-}
-function saveLocal(s: Record<string, { qty: number; ts: number }>) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-}
-
 export const useCollection = create<CollectionState>((set, get) => ({
   collection: {},
   isLoaded: false,
 
-  load: async (userId?: string) => {
-    if (userId) {
-      try {
-        const { supabase } = await import('@/lib/supabase/client');
-        const { data } = await supabase()
-          .from('collections')
-          .select('sticker_code, qty, updated_at')
-          .eq('user_id', userId);
-        if (data) {
-          const map: Record<string, { qty: number; ts: number }> = {};
-          data.forEach((r) => {
-            map[r.sticker_code] = { qty: r.qty, ts: new Date(r.updated_at).getTime() };
-          });
-          set({ collection: map, isLoaded: true });
-          saveLocal(map);
-          return;
-        }
-      } catch { /* fall through to local */ }
+  load: async (userId: string) => {
+    try {
+      const { supabase } = await import('@/lib/supabase/client');
+      const { data } = await supabase()
+        .from('collections')
+        .select('sticker_code, qty, updated_at')
+        .eq('user_id', userId);
+      const map: Record<string, { qty: number; ts: number }> = {};
+      (data || []).forEach((r) => {
+        map[r.sticker_code] = { qty: r.qty, ts: new Date(r.updated_at).getTime() };
+      });
+      set({ collection: map, isLoaded: true });
+    } catch {
+      set({ isLoaded: true });
     }
-    set({ collection: loadLocal(), isLoaded: true });
   },
 
   qty: (code) => get().collection[code]?.qty ?? 0,
 
   setQty: async (code, qty) => {
-    const prev = get().collection;
-    const next = { ...prev };
+    // Optimistic in-memory update for responsive UI
+    const next = { ...get().collection };
     if (qty <= 0) {
       delete next[code];
     } else {
       next[code] = { qty, ts: Date.now() };
     }
     set({ collection: next });
-    saveLocal(next);
 
     try {
       const { supabase } = await import('@/lib/supabase/client');
@@ -91,23 +73,21 @@ export const useCollection = create<CollectionState>((set, get) => ({
           { onConflict: 'user_id,sticker_code' }
         );
       }
-    } catch { /* offline-capable */ }
+    } catch { /* in-memory state already updated */ }
   },
 
   cycle: async (code) => {
-    const cur = get().qty(code);
-    await get().setQty(code, cur + 1);
+    await get().setQty(code, get().qty(code) + 1);
   },
 
   reset: async () => {
     set({ collection: {} });
-    saveLocal({});
     try {
       const { supabase } = await import('@/lib/supabase/client');
       const db = supabase();
       const { data: { user } } = await db.auth.getUser();
       if (user) await db.from('collections').delete().eq('user_id', user.id);
-    } catch { /* offline-capable */ }
+    } catch { /* best effort */ }
   },
 
   ownedCount: () => {

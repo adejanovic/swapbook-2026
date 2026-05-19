@@ -8,11 +8,10 @@ export function CollectionLoader() {
   const isLoaded = useCollection(s => s.isLoaded);
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase().auth.getUser();
-      load(user?.id);
-    };
-    if (!isLoaded) init();
+    if (isLoaded) return;
+    supabase().auth.getUser().then(({ data: { user } }) => {
+      if (user) load(user.id);
+    });
   }, [load, isLoaded]);
 
   return null;

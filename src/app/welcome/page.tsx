@@ -54,14 +54,14 @@ export default function WelcomePage() {
             }}
           >Create your album</button>
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/login')}
             style={{
               appearance: 'none', border: 0, cursor: 'pointer',
               height: 52, borderRadius: 16, background: 'transparent', color: '#EBEDF0',
               fontFamily: 'var(--font-inter, Inter, sans-serif)', fontWeight: 600, fontSize: 14,
               boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.07)',
             }}
-          >Continue as guest</button>
+          >Sign in</button>
         </div>
       </div>
     </div>

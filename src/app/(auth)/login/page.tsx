@@ -112,11 +112,6 @@ export default function LoginPage() {
             Create yours
           </Link>
         </div>
-        <Link href="/dashboard" style={{
-          fontFamily: 'var(--font-inter, sans-serif)', fontSize: 12, color: '#5A5E69', textDecoration: 'none',
-        }}>
-          Continue as guest →
-        </Link>
       </div>
     </div>
   );

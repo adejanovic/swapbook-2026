@@ -136,7 +136,7 @@ export default function ProfilePage() {
                 {displayName}
               </div>
               <div style={{ fontSize: 12, color: '#878B96', marginTop: 2 }}>
-                {user ? `@${handle}` : 'Guest — progress saved locally'}
+                @{handle}
               </div>
             </div>
           </div>
@@ -149,22 +149,12 @@ export default function ProfilePage() {
       </div>
 
       <div style={{ padding: '18px 14px 24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {!user && (
-          <SettingsRow
-            icon={<Icons.user s={18} />}
-            label="Create an account"
-            hint="Sync across devices"
-            onClick={() => router.push('/register')}
-          />
-        )}
         <SettingsRow icon={<Icons.share s={18} />} label="Share my profile" hint={`swap.bk/${handle}`} onClick={handleShare} />
         <SettingsRow icon={<Icons.copy s={18} />} label="Export collection" hint="CSV" onClick={handleExport} />
         <SettingsRow icon={<Icons.people s={18} />} label="Manage groups" hint="Groups" onClick={() => router.push('/community')} />
         <SettingsRow icon={<Icons.scan s={18} />} label="Scan a pack" hint="Beta" onClick={() => showToast('Coming soon 👀')} />
         <SettingsRow icon={<Icons.trash s={18} />} label="Reset album" danger onClick={handleReset} />
-        {user && (
-          <SettingsRow icon={<Icons.close s={18} />} label="Sign out" danger onClick={handleSignOut} />
-        )}
+        <SettingsRow icon={<Icons.close s={18} />} label="Sign out" danger onClick={handleSignOut} />
       </div>
     </div>
   );
